@@ -5,10 +5,9 @@ Configuration:
 	MutationProbability: 0.065
 	CrossoverProbability: 0.85
 	ElitismPercentage: 0.02
-	FitnessFunction: FitnessFunctionBinaryF6()
+	FitnessFunction: SchafferBinaryF6()
 
-
-Results:
+Begin Results:
 
 Generation 0:
 Individual 1:[-38.206944038139355][31.862624135643046]
@@ -1121,14 +1120,4 @@ Max Fitness: 0.9999999988619942
 Average Fitness: 0.9999999988619946
 Total Fitness: 999.9999988619946
 
-The thread 0x4a78 has exited with code 0 (0x0).
-The thread 0xb24 has exited with code 0 (0x0).
-The thread 0x3dc0 has exited with code 0 (0x0).
-The thread 0x394 has exited with code 0 (0x0).
-The thread 0x40a8 has exited with code 0 (0x0).
-The thread 0x374c has exited with code 0 (0x0).
-The thread 0x9c4 has exited with code 0 (0x0).
-The thread 0x1ffc has exited with code 0 (0x0).
-The thread 0x45d4 has exited with code 0 (0x0).
-The thread 0x352c has exited with code 0 (0x0).
-The program '[20552] testhost.exe' has exited with code 0 (0x0).
+End Results.
