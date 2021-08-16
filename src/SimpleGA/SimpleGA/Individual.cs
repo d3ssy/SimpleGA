@@ -34,9 +34,9 @@ namespace SimpleGA
                 throw new ArgumentException("Gene count must be even.");
             }
 
-            Random random = new Random();
             for (int i = 0; i < geneCount; i++)
             {
+                Random random = new Random();
                 int randomBinary = (random.NextDouble() - 0.5) * 2 > 0 ? 1 : 0;
                 _dna.Add(new Gene(randomBinary));
             }
@@ -99,7 +99,7 @@ namespace SimpleGA
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(_dna, Id, Fitness);
+            return Id.GetHashCode();
         }
 
         private string GetBinarySequence()

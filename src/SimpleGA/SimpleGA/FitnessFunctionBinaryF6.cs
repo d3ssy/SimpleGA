@@ -15,7 +15,9 @@ namespace SimpleGA
     {
         public double Evaluate(Individual individual)
         {
-            var (x,y) = DecodeDnaBinarySequence(individual);
+            var decodedSequence = DecodeDnaBinarySequence(individual);
+            var x = decodedSequence[0];
+            var y = decodedSequence[1];
 
             //evaluate binary f6 function for x and y values
             var num1 = Math.Pow(Math.Sin(Math.Sqrt(x * x + y * y)), 2);
@@ -27,11 +29,12 @@ namespace SimpleGA
             return fitness;
         }
 
-        public static (double x, double y) DecodeDnaBinarySequence(Individual individual)
+        public double[] DecodeDnaBinarySequence(Individual individual)
         {
             //get x and y values from binary gene sequence
             //first half of dna sequence for x, second half for y
             //convert the binary sequences into Int64
+            double[] result = new double[2];
             var xSubstring = individual.DnaBinarySequence.Substring(0, individual.GeneCount / 2);
             var ySubstring = individual.DnaBinarySequence.Substring(individual.GeneCount / 2, individual.GeneCount / 2);
             var tempX = (int) Convert.ToInt64(xSubstring, 2);
@@ -43,7 +46,9 @@ namespace SimpleGA
             //remap values to function range
             var x = (tempX * domainLength) - 100;
             var y = (tempY * domainLength) - 100;
-            return (x, y);
+            result[0] = x;
+            result[1] = y;
+            return result;
         }
     }
 }

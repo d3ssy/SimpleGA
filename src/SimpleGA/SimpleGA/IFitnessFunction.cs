@@ -6,10 +6,17 @@
     public interface IFitnessFunction
     {
         /// <summary>
-        /// Every fitness function should Evaluate an Individual's fitness.
+        /// Evaluates an Individual's fitness.
         /// </summary>
-        /// <param name="individual"></param>
-        /// <returns></returns>
-        public double Evaluate(Individual individual);
+        /// <param name="individual">Individual.</param>
+        /// <returns>Fitness.</returns>
+        double Evaluate(Individual individual);
+
+        /// <summary>
+        /// Decode binary sequence into parameters.
+        /// </summary>
+        /// <param name="individual">Individual.</param>
+        /// <returns>Decoded sequence as array of double.</returns>
+        double[] DecodeDnaBinarySequence(Individual individual);
     }
 }

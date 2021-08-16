@@ -23,8 +23,8 @@ namespace SimpleGA
         public int Size => Individuals.Count;
         public double Fitness => Individuals.Sum(i => i.Fitness);
         public double FitnessAverage => Fitness / Individuals.Count;
-        public double FitnessMax => Individuals.OrderByDescending(i => i.Fitness).First().Fitness;
-        public double FitnessMin => Individuals.OrderBy(i => i.Fitness).First().Fitness;
+        public double FitnessMax => Individuals.Max(i => i.Fitness);
+        public double FitnessMin => Individuals.Min(i => i.Fitness);
         public List<Individual> TopFive => Individuals.Take(5).ToList();
         public List<Individual> TopTen => Individuals.Take(5).ToList();
         public List<Individual> Individuals { get; set; } = new List<Individual>();

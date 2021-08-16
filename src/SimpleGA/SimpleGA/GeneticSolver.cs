@@ -11,90 +11,107 @@ namespace SimpleGA
     public class GeneticSolver
     {
         private Population _population;
-        private GeneticSolverConfiguration _configuration;
-        
+        private readonly GeneticSolverConfiguration _configuration;
+        private static IFitnessFunction _fitnessFunction;
+
         public GeneticSolver(GeneticSolverConfiguration configuration)
         {
             _configuration = configuration;
+            _fitnessFunction = configuration.FitnessFunction;
             _population = new Population(configuration.PopulationSize, configuration.IndividualGeneCount);
         }
 
-        public GeneticSolver(Population initialPopulation, GeneticSolverConfiguration configuration):this(configuration)
-        {
-            _population = initialPopulation;
-        }
-
+        /// <summary>
+        /// The population that evolves as the solver runs.
+        /// </summary>
         public Population Population => _population;
 
-        public void Run(IFitnessFunction fitnessFunction)
+        /// <summary>
+        /// Main method. Runs for specified number of generations in configuration.
+        /// At each iteration a new generation is created through selection, crossover and mutation.
+        /// </summary>
+        public void Run()
         {
-            Population tempGeneration = _population;
+            Population currentPopulation = _population;
             //repeat until max generations is reached, or some other stop criteria
             int k = 0;
-            while (k < _configuration.Generations)
+            while (k <= _configuration.Generations)
             {
-                var generation = new Population();
-                //evaluate initial population fitness using fitness function
-                foreach (var individual in tempGeneration.Individuals)
-                {
-                    individual.Fitness = fitnessFunction.Evaluate(individual); //evaluate fitness of population
-                    individual.IsElite = false; //reset elitism for the entire generation
-                }
-                
+                //Evaluate population fitness using fitness function
+                EvaluateFitness(currentPopulation, _fitnessFunction);
 #if DEBUG
-                //Output top 5 individuals, every 5 generations
-                if (k % 5 == 0)
+                //Output top 5 individuals, every 5 generations along with fitness metrics for the population.
+                if (k % 1 == 0)
                 {
-                    Debug.WriteLine($"///////////Generation {k} Top 5///////////");
-                    foreach (var individual in tempGeneration.TopFive)
-                    {
-                        Debug.WriteLine(FitnessFunctionBinaryF6.DecodeDnaBinarySequence(individual).ToString());
-                    }
-
-                    Debug.WriteLine($"Min Fitness: {tempGeneration.FitnessMin}");
-                    Debug.WriteLine($"Max Fitness: {tempGeneration.FitnessMax}");
-                    Debug.WriteLine($"Average Fitness: {tempGeneration.FitnessAverage}");
-                    Debug.WriteLine($"Total Fitness: {tempGeneration.Fitness}");
-                    Debug.WriteLine("//////////////////////////////////////");
+                    Debug.WriteLine($"Generation {k}:");
+                    Debug.WriteLine(PopulationMetrics(currentPopulation));
                 }
 #endif
+                //Fitness Evaluation
+                if (k == _configuration.Generations)
+                {
+                    break;
+                }
 
-                //tag elite individuals so they can form part of new generation without modification (e.g. mutation)
+                //New population
+                var newPopulation = new Population();
+                
+                //Apply elitism
                 if (_configuration.ElitismPercentage > 0)
                 {
-                    TagElites(tempGeneration, _configuration.ElitismPercentage);
-                    generation.Individuals.AddRange(tempGeneration.Individuals.Where(ind => ind.IsElite).ToList());
+                    TagElites(currentPopulation, _configuration.ElitismPercentage);
+                    newPopulation.Individuals.AddRange(currentPopulation.Individuals.Where(ind => ind.IsElite).ToList());
                 }
 
-                //select parents and make some babies
-                for (int i = 0; i < (tempGeneration.Size - tempGeneration.Individuals.Count(ind => ind.IsElite)) / 2; i++)
+                //Select parents for crossover (mating)
+                for (int i = 0; i < (currentPopulation.Size - currentPopulation.Individuals.Count(ind => ind.IsElite)) / 2; i++)
                 {
-                    var (parentA, parentB) = BinaryTournamentSelection(tempGeneration);
+                    var (parentA, parentB) = BinaryTournamentSelection(currentPopulation);
+                    
+                    //Crossover
                     var (childA, childB) = CrossoverSinglePoint(parentA, parentB);
-                    generation.Individuals.Add(childA);
-                    generation.Individuals.Add(childB);
+                    newPopulation.Individuals.Add(childA);
+                    newPopulation.Individuals.Add(childB);
                 }
 
-                //mutate individuals in new generation to ensure diversity
-                foreach (var individual in tempGeneration.Individuals)
+                //Mutation
+                if (_configuration.MutationProbability > 0)
                 {
-                    Mutate(individual, _configuration.MutationProbability);
+                    foreach (var individual in currentPopulation.Individuals)
+                    {
+                        BinaryMutation(individual, _configuration.MutationProbability);
+                    }
                 }
 
-                tempGeneration = generation;
+                //Update current population to new population
+                currentPopulation = newPopulation;
                 k++;
             }
 
-            _population = tempGeneration;
+            //Update final population to latest population
+            _population = currentPopulation;
+        }
+        
+        /// <summary>
+        /// Evaluate fitness of each individual in population based on fitness function.
+        /// </summary>
+        /// <param name="population">Population to evaluate.</param>
+        /// <param name="fitnessFunction">Fitness function.</param>
+        public static void EvaluateFitness(Population population, IFitnessFunction fitnessFunction)
+        {
+            foreach (var individual in population.Individuals)
+            {
+                individual.Fitness = fitnessFunction.Evaluate(individual); //evaluate fitness of population
+                individual.IsElite = false; //reset elitism for the entire generation
+            }
         }
 
         /// <summary>
-        /// Returns the top x percent of the fittest individuals from the population.
+        /// Tags a certain percentage of fittest individuals as elites.
         /// </summary>
         /// <param name="population">Population.</param>
-        /// <param name="percent">Percent of fittest individuals.</param>
-        /// <returns>Top x percent of individuals based on fitness.</returns>
-        private void TagElites(Population population, double percent)
+        /// <param name="percent">Percent of fittest individuals to tag as elit.</param>
+        public static void TagElites(Population population, double percent)
         {
             if (percent > 1 || percent < 0) throw new ArgumentException("Elitism percent must be between 0.0 and 1.0");
             var selectedCount = (int) Math.Round(population.Size * percent);
@@ -107,34 +124,25 @@ namespace SimpleGA
         }
 
         /// <summary>
-        /// Selects two parents for mating using tournament selection.
+        /// Selects two parents for crossover via binary tournament selection. 
         /// </summary>
-        /// <param name="population"></param>
-        /// <returns></returns>
-        private Individual TournamentSelection(Population population, int tournamentSize)
-        {
-            Individual best = null;
-            for (int i = 0; i < tournamentSize; i++)
-            {
-                var randomIndex = new Random().Next(0, population.Size);
-                var individual = population.Individuals[randomIndex];
-                if (best == null || individual.Fitness > best.Fitness)
-                {
-                    best = individual;
-                }
-            }
-
-            return best;
-        }
-
-        public (Individual parentA, Individual parentB) BinaryTournamentSelection(Population population)
+        /// <param name="population">Population from which to select the parents</param>
+        /// <returns>Two individuals from the population.</returns>
+        public static (Individual parentA, Individual parentB) BinaryTournamentSelection(Population population)
         {
             var parentA = TournamentSelection(population, 2);
             var parentB = TournamentSelection(population, 2);
             return (parentA, parentB);
         }
 
-        public (Individual childA, Individual childB) CrossoverSinglePoint(Individual parentA, Individual parentB)
+        /// <summary>
+        /// Produces two children from two parents by swapping a sub-sequence of the parents' dna binary sequences.
+        /// The size of the sub-sequence is determined randomly.
+        /// </summary>
+        /// <param name="parentA">Individual representing first parent.</param>
+        /// <param name="parentB">Individual representing second parent.</param>
+        /// <returns>Two new child individuals.</returns>
+        public static (Individual childA, Individual childB) CrossoverSinglePoint(Individual parentA, Individual parentB)
         {
             var childA = new Individual();
             var childB = new Individual();
@@ -157,7 +165,12 @@ namespace SimpleGA
             return (childA, childB);
         }
 
-        public void Mutate(Individual individual, double mutationProbability)
+        /// <summary>
+        /// Applies random mutation to individual's binary dna sequence by swapping 1's to 0's and 0's to 1's based on some probability.
+        /// </summary>
+        /// <param name="individual">Individual to mutate.</param>
+        /// <param name="mutationProbability">Probability of mutation, values from 0 to 1.</param>
+        public static void BinaryMutation(Individual individual, double mutationProbability)
         {
             if (individual.IsElite) return; //do not mutate individual if elite
             
@@ -172,6 +185,49 @@ namespace SimpleGA
 
                 individual.Dna[i] = individual.Dna[i];
             }
+        }
+
+        private static Individual TournamentSelection(Population population, int tournamentSize)
+        {
+            Individual best = null;
+            for (int i = 0; i < tournamentSize; i++)
+            {
+                var randomIndex = new Random().Next(0, population.Size);
+                var individual = population.Individuals[randomIndex];
+                if (best == null || individual.Fitness > best.Fitness)
+                {
+                    best = individual;
+                }
+            }
+            return best;
+        }
+
+        /// <summary>
+        /// Output top 5 individuals and their genes along with overall fitness values for the population.
+        /// </summary>
+        /// <param name="population"></param>
+        public static string PopulationMetrics(Population population)
+        {
+            var stringBuilder = new StringBuilder();
+
+            for (var rank = 0; rank < population.TopFive.Count; rank++)
+            {
+                var individual = population.TopFive[rank];
+                stringBuilder.Append($"Individual {rank + 1}:");
+                foreach (var value in _fitnessFunction.DecodeDnaBinarySequence(individual))
+                {
+                    stringBuilder.Append($"[{value}]");
+                }
+
+                stringBuilder.AppendLine();
+            }
+
+            stringBuilder.AppendLine($"Min Fitness: {population.FitnessMin}");
+            stringBuilder.AppendLine($"Max Fitness: {population.FitnessMax}");
+            stringBuilder.AppendLine($"Average Fitness: {population.FitnessAverage}");
+            stringBuilder.AppendLine($"Total Fitness: {population.Fitness}");
+
+            return stringBuilder.ToString();
         }
     }
 }
