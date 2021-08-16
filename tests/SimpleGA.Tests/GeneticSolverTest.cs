@@ -26,7 +26,7 @@ namespace SimpleGA.Tests
             configuration.MutationProbability = 0.065;
             configuration.CrossoverProbability = 0.85;
             configuration.ElitismPercentage = 0.02;
-            configuration.FitnessFunction = new FitnessFunctionBinaryF6();
+            configuration.FitnessFunction = new SchafferBinaryF6();
             var solver = new GeneticSolver(configuration);
 
             _testOutput.WriteLine("Generation 0:");

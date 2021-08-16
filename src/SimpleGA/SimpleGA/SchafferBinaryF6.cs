@@ -12,7 +12,7 @@ namespace SimpleGA
     /// the algorithms tend to get stuck in local optima. The F6 function is designed to have its peak at the origin with a value of one and a valley at the origin
     /// with a value of zero. Knowing this we can use it to make sure the GA is minimizing towards global optimum (0 or 1) and not local optima.
     /// </summary>
-    public class FitnessFunctionBinaryF6 : IFitnessFunction
+    public class SchafferBinaryF6 : IFitnessFunction
     {
         public double Evaluate(Individual individual)
         {
