@@ -1,4 +1,4 @@
-﻿namespace SimpleGA
+﻿namespace SimpleGA.Interfaces
 {
     /// <summary>
     /// Defines the contract for a fitness function.
